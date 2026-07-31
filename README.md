@@ -1,5 +1,9 @@
 # AI Safety Incident Tracker
 
+[![Ver el dashboard en vivo](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://ai-safety-incidents.streamlit.app)
+
+**▶ [ai-safety-incidents.streamlit.app](https://ai-safety-incidents.streamlit.app)** — dashboard desplegado, sin instalar nada.
+
 Dashboard que clasifica **23 incidentes públicos y documentados de sistemas de IA en producción**
 (2015–2025) por modo de fallo y severidad, con un análisis de causa raíz de un caso real.
 
@@ -30,8 +34,8 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 
 Tests: `.venv/bin/pip install -r requirements-dev.txt && .venv/bin/python -m pytest`
 
-Despliegue en [Streamlit Community Cloud](https://share.streamlit.io): apuntar al repo y a `app.py`;
-no necesita variables de entorno ni secretos.
+Desplegado en [Streamlit Community Cloud](https://ai-safety-incidents.streamlit.app): repo, rama
+`main`, `app.py` y Python 3.12 en *Advanced settings*. No necesita variables de entorno ni secretos.
 
 ---
 
