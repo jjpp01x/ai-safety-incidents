@@ -105,6 +105,6 @@ de cada incidente.
 
 *Fuentes primarias:*
 [OpenAI, informe del incidente del 20 de marzo](https://openai.com/index/march-20-chatgpt-outage/) ·
-[Lasso Security](https://www.lasso.security/blog/1500-huggingface-api-tokens-were-exposed-putting-meta-llama-bloom-pythia-and-openai-users-at-critical-risk) ·
+[Lasso Security](https://www.lasso.security/blog/1500-huggingface-api-tokens-were-exposed-leaving-millions-of-meta-llama-bloom-and-pythia-users-for-supply-chain-attacks) ·
 [JFrog Security Research](https://jfrog.com/blog/data-scientists-targeted-by-malicious-hugging-face-ml-models-with-silent-backdoor/) ·
 [Hugging Face, Space secrets disclosure](https://huggingface.co/blog/space-secrets-disclosure)

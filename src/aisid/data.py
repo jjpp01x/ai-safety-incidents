@@ -23,6 +23,18 @@ ETIQUETA_TIPO: dict[str, str] = {
     "seguridad": "Seguridad",
 }
 
+#: ¿Habría anticipado este fallo una revisión técnica previa al despliegue?
+#: Es la única columna del dataset que es un juicio y no un hecho, por eso cada
+#: fila lleva en `control_dd` el control concreto que lo habría detectado: sin
+#: nombrar el control, la respuesta no es verificable por quien lea el dataset.
+DETECTABILIDAD: tuple[str, ...] = ("si", "parcial", "no")
+
+ETIQUETA_DETECTABILIDAD: dict[str, str] = {
+    "si": "Sí",
+    "parcial": "Parcial",
+    "no": "No",
+}
+
 COLUMNAS_REQUERIDAS: tuple[str, ...] = (
     "id",
     "fecha",
@@ -37,6 +49,8 @@ COLUMNAS_REQUERIDAS: tuple[str, ...] = (
     "resumen",
     "fuente",
     "url",
+    "detectable_dd",
+    "control_dd",
 )
 
 SEVERIDAD_MIN = 1
@@ -67,6 +81,12 @@ def validar(df: pd.DataFrame) -> list[str]:
     tipos_malos = sorted(set(df["tipo_fallo"]) - set(TIPOS))
     if tipos_malos:
         errores.append(f"tipo_fallo fuera de la taxonomía {TIPOS}: {tipos_malos}")
+
+    detect_malos = sorted(set(df["detectable_dd"]) - set(DETECTABILIDAD))
+    if detect_malos:
+        errores.append(
+            f"detectable_dd fuera del vocabulario {DETECTABILIDAD}: {detect_malos}"
+        )
 
     severidad = pd.to_numeric(df["severidad"], errors="coerce")
     fuera = df["id"][
@@ -101,6 +121,10 @@ def enriquecer(df: pd.DataFrame) -> pd.DataFrame:
     out["anio"] = out["fecha"].dt.year
     out["tipo_fallo"] = pd.Categorical(out["tipo_fallo"], categories=TIPOS, ordered=True)
     out["tipo_label"] = out["tipo_fallo"].map(ETIQUETA_TIPO).astype(str)
+    out["detectable_dd"] = pd.Categorical(
+        out["detectable_dd"], categories=DETECTABILIDAD, ordered=True
+    )
+    out["detectable_label"] = out["detectable_dd"].map(ETIQUETA_DETECTABILIDAD).astype(str)
     return out.sort_values("fecha").reset_index(drop=True)
 
 

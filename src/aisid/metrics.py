@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from .data import ETIQUETA_TIPO, TIPOS
+from .data import DETECTABILIDAD, ETIQUETA_DETECTABILIDAD, ETIQUETA_TIPO, TIPOS
 
 SEVERIDAD_ALTA = 4
 
@@ -92,3 +92,44 @@ def calidad_evidencia(df: pd.DataFrame) -> pd.DataFrame:
     out = df["evidencia"].value_counts().rename_axis("evidencia").reset_index(name="incidentes")
     out["pct"] = (100 * out["incidentes"] / len(df)).round(1)
     return out
+
+
+def por_detectabilidad(df: pd.DataFrame) -> pd.DataFrame:
+    """Reparto por detectabilidad en diligencia previa.
+
+    Es la vista que convierte un registro de incidentes en un instrumento de
+    inversor: no "qué salió mal", sino "cuánto de esto se habría visto venir".
+    """
+    base = pd.DataFrame({"detectable_dd": list(DETECTABILIDAD)})
+    if df.empty:
+        base["incidentes"] = 0
+        base["severidad_media"] = 0.0
+        base["pct"] = 0.0
+    else:
+        agg = (
+            df.groupby("detectable_dd", observed=False)
+            .agg(incidentes=("id", "count"), severidad_media=("severidad", "mean"))
+            .reset_index()
+        )
+        agg["detectable_dd"] = agg["detectable_dd"].astype(str)
+        base = base.merge(agg, on="detectable_dd", how="left").fillna(
+            {"incidentes": 0, "severidad_media": 0.0}
+        )
+        base["pct"] = (100 * base["incidentes"] / len(df)).round(1)
+    base["incidentes"] = base["incidentes"].astype(int)
+    base["severidad_media"] = base["severidad_media"].round(2)
+    base["detectable_label"] = base["detectable_dd"].map(ETIQUETA_DETECTABILIDAD)
+    return base
+
+
+def detectabilidad_por_tipo(df: pd.DataFrame) -> pd.DataFrame:
+    """Cruce tipo de fallo × detectabilidad: qué modos de fallo se anticipan y cuáles no."""
+    if df.empty:
+        return pd.DataFrame(columns=[ETIQUETA_DETECTABILIDAD[d] for d in DETECTABILIDAD])
+    tabla = pd.crosstab(df["tipo_fallo"], df["detectable_dd"], dropna=False)
+    tabla = tabla.reindex(columns=list(DETECTABILIDAD), fill_value=0)
+    tabla = tabla.reindex(list(TIPOS), fill_value=0)
+    tabla.columns = [ETIQUETA_DETECTABILIDAD[c] for c in tabla.columns]
+    tabla.index = [ETIQUETA_TIPO[t] for t in tabla.index]
+    tabla.index.name = "tipo_fallo"
+    return tabla
