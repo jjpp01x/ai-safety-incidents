@@ -1,19 +1,29 @@
-"""Comprueba que las fuentes del dataset siguen siendo verificables.
-
-Un dataset cuyo valor es la trazabilidad se degrada solo: los medios reorganizan
-sus URLs, las entradas de blog se renombran y algunos dominios bloquean tráfico
-por región. Esto detecta ese deterioro:
+"""Comprueba que las 23 fuentes del dataset siguen siendo verificables.
 
     .venv/bin/python scripts/check_links.py
 
-Cuatro veredictos, y conviene no confundirlos:
+Un comprobador ingenuo deja sin verificar todo lo que hay detrás de un muro
+anti-bot —Reuters, NYT, Bloomberg— y llama "roto" a lo que solo está bloqueado.
+Aquí ninguna fila se queda sin veredicto: cuando el origen no se deja consultar,
+se verifica su copia en Internet Archive, que es exactamente para lo que está.
 
-- `ok`      la fuente responde 200.
-- `bot`     401/403/429: muro anti-bot (Reuters, NYT, Bloomberg…). Abre bien en
-            un navegador; el script no puede confirmarlo y lo lista aparte.
-- `archivo` el origen no responde desde aquí, pero la copia en Internet Archive
-            sí. La cita sigue siendo verificable; el enlace vivo, no siempre.
-- `ROTO`    ni el origen ni la copia. Es el único caso que exige tocar la fila.
+Dos casos merecen trato propio y lo tienen:
+
+- **sec.gov** exige un User-Agent con un contacto entre paréntesis (su política
+  de acceso automatizado). Con el UA de navegador devuelve 403. Pon el tuyo en
+  `SEC_CONTACT` — el valor por defecto es un marcador de posición, no un correo
+  real, y la SEC pide uno real para poder avisarte si tu tráfico les molesta:
+
+      SEC_CONTACT=tu@correo.com .venv/bin/python scripts/check_links.py
+- **dewr.gov.au** rechaza el handshake desde fuera de su región. No es link rot:
+  Internet Archive conserva snapshots 200, y por ahí se verifica.
+
+Veredictos:
+
+- `vivo`   el origen responde 200.
+- `copia`  el origen no se deja consultar (403 anti-bot, bloqueo regional…),
+           pero la copia archivada responde 200. La cita es verificable.
+- `ROTO`   ni origen ni copia. Único caso que obliga a tocar la fila.
 
 Sale con código distinto de 0 solo si hay algún ROTO.
 """
@@ -21,39 +31,44 @@ Sale con código distinto de 0 solo si hay algún ROTO.
 from __future__ import annotations
 
 import csv
+import os
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 CSV = Path(__file__).resolve().parents[1] / "data" / "incidents.csv"
-UA = (
+
+UA_NAVEGADOR = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 )
-BLOQUEO_ANTIBOT = {"401", "403", "429"}
+# La SEC rechaza los UA de navegador: quiere identificación con contacto.
+CONTACTO = os.environ.get("SEC_CONTACT", "contacto@ejemplo.com")
+UA_POR_HOST = {"sec.gov": f"ai-safety-incidents/1.0 ({CONTACTO})"}
+
+
+def agente(url: str) -> str:
+    return next((ua for host, ua in UA_POR_HOST.items() if host in url), UA_NAVEGADOR)
 
 
 def estado(url: str) -> str:
     if not url:
-        return "000"
+        return "---"
     salida = subprocess.run(
-        ["curl", "-s", "-o", "/dev/null", "-A", UA, "-L", "--max-time", "30",
+        ["curl", "-s", "-o", "/dev/null", "-A", agente(url), "-L", "--max-time", "30",
          "-w", "%{http_code}", url],
         capture_output=True, text=True,
     ).stdout.strip()
     return salida or "000"
 
 
-def veredicto(fila: dict) -> tuple[str, str]:
-    codigo = estado(fila["url"])
-    if codigo == "200":
-        return "ok ", codigo
-    if codigo in BLOQUEO_ANTIBOT:
-        return "bot", codigo
-    if estado(fila.get("url_archivo", "")) == "200":
-        return "archivo", codigo
-    return "ROTO", codigo
+def veredicto(fila: dict) -> tuple[str, str, str]:
+    origen = estado(fila["url"])
+    if origen == "200":
+        return "vivo", origen, ""
+    copia = estado(fila.get("url_archivo", ""))
+    return ("copia" if copia == "200" else "ROTO"), origen, copia
 
 
 def main() -> int:
@@ -61,22 +76,21 @@ def main() -> int:
     with ThreadPoolExecutor(max_workers=8) as pool:
         resultados = list(pool.map(veredicto, filas))
 
-    grupos: dict[str, list[str]] = {"ok ": [], "bot": [], "archivo": [], "ROTO": []}
-    for fila, (marca, codigo) in zip(filas, resultados):
+    grupos: dict[str, list[str]] = {"vivo": [], "copia": [], "ROTO": []}
+    for fila, (marca, origen, copia) in zip(filas, resultados):
         grupos[marca].append(fila["id"])
-        print(f"{marca:<7} {fila['id']} {codigo} {fila['fuente'][:40]}")
+        detalle = f"origen {origen}" + (f" · copia {copia}" if copia else "")
+        print(f"{marca:<5} {fila['id']}  {detalle:<26} {fila['fuente'][:38]}")
 
+    verificadas = len(grupos["vivo"]) + len(grupos["copia"])
     print(
-        f"\n{len(grupos['ok '])} vivas · {len(grupos['bot'])} tras muro anti-bot · "
-        f"{len(grupos['archivo'])} solo por copia archivada · {len(grupos['ROTO'])} rotas"
+        f"\n{verificadas}/{len(filas)} verificadas — "
+        f"{len(grupos['vivo'])} por el origen, {len(grupos['copia'])} por copia archivada"
     )
-    for clave, etiqueta in (
-        ("bot", "Anti-bot (verificar en navegador)"),
-        ("archivo", "Solo copia archivada"),
-        ("ROTO", "ROTAS — hay que sustituir la fuente"),
-    ):
-        if grupos[clave]:
-            print(f"{etiqueta}: {', '.join(grupos[clave])}")
+    if grupos["copia"]:
+        print("Verificadas por copia: " + ", ".join(grupos["copia"]))
+    if grupos["ROTO"]:
+        print("ROTAS — hay que sustituir la fuente: " + ", ".join(grupos["ROTO"]))
     return 1 if grupos["ROTO"] else 0
 
 

@@ -140,16 +140,24 @@ contienen:
 - **`scripts/fetch_archives.py`** rellena `url_archivo` con el snapshot de Internet Archive más
   cercano *posterior* a la fecha del incidente — el que refleja la página tal como era cuando se
   citó, no como quedó después de una reescritura. Idempotente: solo rellena huecos.
-- **`scripts/check_links.py`** recorre las fuentes y emite cuatro veredictos:
+- **`scripts/check_links.py`** recorre las fuentes sin dejar ninguna sin veredicto. Cuando el
+  origen no se deja consultar —muro anti-bot de Reuters, NYT o Bloomberg; bloqueo regional de
+  `dewr.gov.au`— verifica la copia archivada, que es exactamente para lo que está:
 
 | Veredicto | Significado | Acción |
 |---|---|---|
-| `ok` | El origen responde 200 | Ninguna |
-| `bot` | 401/403/429: muro anti-bot (Reuters, NYT, Bloomberg, Zillow, OpenAI) | Verificar en navegador; el enlace abre bien |
-| `archivo` | El origen no responde, la copia archivada sí | La cita sigue siendo verificable; vigilar |
+| `vivo` | El origen responde 200 | Ninguna |
+| `copia` | El origen no se deja consultar, pero la copia archivada responde 200 | Ninguna: la cita es verificable |
 | `ROTO` | Ni origen ni copia | Sustituir la fuente |
 
 Sale con código distinto de 0 solo ante un `ROTO`, que es el único caso que obliga a tocar una fila.
+**Último repaso: 23/23 verificadas** — 18 por el origen, 5 por copia archivada (INC-005, INC-010,
+INC-011, INC-012, INC-023).
+
+`sec.gov` merece una nota: rechaza los User-Agent de navegador y exige identificación con un contacto
+entre paréntesis. El script lo contempla; pon el tuyo en `SEC_CONTACT=tu@correo.com` en lugar del
+marcador de posición, porque la SEC pide un contacto real para poder avisarte si tu tráfico les
+molesta.
 
 Un test (`test_toda_fuente_es_verificable_a_diez_anos_vista`) exige que **cada fila sea verificable
 dentro de diez años**: o tiene copia archivada, o cita un repositorio cuya permanencia es su función

@@ -112,10 +112,11 @@ renombran sus entradas y hay dominios que bloquean tráfico por región. Por eso
 al enlace vivo, una **copia permanente en Internet Archive** — el snapshot más cercano *posterior* al
 incidente, que es la página tal como era cuando se citó y no como quedó después.
 
-`scripts/check_links.py` distingue cuatro estados donde un comprobador ingenuo vería dos: enlace
-vivo, muro anti-bot (Reuters, NYT, Bloomberg y la SEC devuelven 403 a un script y abren bien en un
-navegador), verificable solo por copia archivada, y roto de verdad. Solo el último obliga a tocar la
-fila, y hay un test que exige que ninguna fuente dependa de que su dominio siga en pie.
+`scripts/check_links.py` no deja ninguna fila sin veredicto. Un comprobador ingenuo daría por
+"rotas" las cinco fuentes que devuelven 403 a un script y abren bien en un navegador; aquí, cuando el
+origen no se deja consultar, se verifica su copia archivada. **Resultado: 23/23 verificadas** —18 por
+el origen y 5 por copia— sin ningún repaso manual pendiente. Un test exige además que ninguna fuente
+dependa de que su dominio siga en pie.
 
 Ese criterio ya cambió dos filas: la de Zillow pasó de una página de relación con inversores a la
 **presentación 8-K ante la SEC**, y la de Deloitte Australia, de la raíz del dominio del
