@@ -1,0 +1,5 @@
+-r requirements.txt
+pytest==8.3.3
+# Solo para scripts/record_demo.py (regenera docs/demo.gif y las capturas):
+playwright==1.61.0
+pillow==12.3.0
