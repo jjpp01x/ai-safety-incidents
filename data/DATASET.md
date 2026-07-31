@@ -83,5 +83,21 @@ equivocada. Los tests de `tests/test_data.py` cubren cada regla.
 Añade una fila al CSV siguiendo el esquema y ejecuta `pytest`. Si la fila incumple el contrato, la
 suite falla antes de que el dashboard la muestre.
 
+### Comprobación de enlaces
+
+Un dataset cuyo valor es la trazabilidad se degrada solo: los medios reorganizan sus URLs y las
+entradas de blog se renombran. `python scripts/check_links.py` recorre las 23 fuentes y sale con
+código distinto de 0 si alguna está rota.
+
+Tres resultados posibles, y conviene no confundirlos:
+
+- **200** — viva y verificada.
+- **401/403** — muro anti-bot (Reuters, NYT, Bloomberg, Zillow, OpenAI). El enlace abre bien en un
+  navegador; el script no puede confirmarlo y los lista aparte.
+- **000 / 404** — sin respuesta o inexistente. Un `000` puede ser también bloqueo geográfico o de
+  CDN, así que antes de tocar la fila hay que abrirla en un navegador.
+
+Último repaso: 17 verificadas, 5 con muro anti-bot y 1 sin respuesta (INC-023, `dewr.gov.au`).
+
 Referencia recomendada para ampliar la muestra: [AI Incident Database](https://incidentdatabase.ai/)
 (> 3.000 informes) y el [AIAAIC Repository](https://www.aiaaic.org/).
