@@ -59,7 +59,8 @@ Es una escala editorial: por eso está escrita, y por eso es discutible fila a f
 | `estado` | texto | `Mitigado` · `Revertido` · `Sistema retirado` · `Sancionado` · `En litigio` · `Sin remedio público` |
 | `resumen` | texto | Una o dos frases: qué falló, no qué se dijo |
 | `fuente` | texto | Nombre de la fuente |
-| `url` | URL | Enlace directo, absoluto |
+| `url` | URL | Enlace directo al documento concreto, absoluto. Nunca la portada ni la raíz del dominio |
+| `url_archivo` | URL \| vacío | Copia permanente en Internet Archive, tomada del snapshot más cercano *posterior* al incidente. La rellena `scripts/fetch_archives.py` |
 | `detectable_dd` | enum | `si` · `parcial` · `no` — ver rúbrica abajo |
 | `control_dd` | texto | El control concreto que lo habría anticipado |
 
@@ -130,21 +131,37 @@ equivocada. Los tests de `tests/test_data.py` cubren cada regla.
 Añade una fila al CSV siguiendo el esquema y ejecuta `pytest`. Si la fila incumple el contrato, la
 suite falla antes de que el dashboard la muestre.
 
-### Comprobación de enlaces
+### Trazabilidad a prueba de link rot
 
-Un dataset cuyo valor es la trazabilidad se degrada solo: los medios reorganizan sus URLs y las
-entradas de blog se renombran. `python scripts/check_links.py` recorre las 23 fuentes y sale con
-código distinto de 0 si alguna está rota.
+Un dataset cuyo valor es la trazabilidad se degrada solo: los medios reorganizan sus URLs, las
+entradas de blog se renombran y algunos dominios bloquean tráfico por región. Dos mecanismos lo
+contienen:
 
-Tres resultados posibles, y conviene no confundirlos:
+- **`scripts/fetch_archives.py`** rellena `url_archivo` con el snapshot de Internet Archive más
+  cercano *posterior* a la fecha del incidente — el que refleja la página tal como era cuando se
+  citó, no como quedó después de una reescritura. Idempotente: solo rellena huecos.
+- **`scripts/check_links.py`** recorre las fuentes y emite cuatro veredictos:
 
-- **200** — viva y verificada.
-- **401/403** — muro anti-bot (Reuters, NYT, Bloomberg, Zillow, OpenAI). El enlace abre bien en un
-  navegador; el script no puede confirmarlo y los lista aparte.
-- **000 / 404** — sin respuesta o inexistente. Un `000` puede ser también bloqueo geográfico o de
-  CDN, así que antes de tocar la fila hay que abrirla en un navegador.
+| Veredicto | Significado | Acción |
+|---|---|---|
+| `ok` | El origen responde 200 | Ninguna |
+| `bot` | 401/403/429: muro anti-bot (Reuters, NYT, Bloomberg, Zillow, OpenAI) | Verificar en navegador; el enlace abre bien |
+| `archivo` | El origen no responde, la copia archivada sí | La cita sigue siendo verificable; vigilar |
+| `ROTO` | Ni origen ni copia | Sustituir la fuente |
 
-Último repaso: 17 verificadas, 5 con muro anti-bot y 1 sin respuesta (INC-023, `dewr.gov.au`).
+Sale con código distinto de 0 solo ante un `ROTO`, que es el único caso que obliga a tocar una fila.
+
+Un test (`test_toda_fuente_es_verificable_a_diez_anos_vista`) exige que **cada fila sea verificable
+dentro de diez años**: o tiene copia archivada, o cita un repositorio cuya permanencia es su función
+—EDGAR de la SEC—, donde una copia externa no añadiría nada. Estado actual: 22 filas con copia
+archivada y 1 en EDGAR.
+
+**Sobre INC-023 (`dewr.gov.au`).** El dominio no responde desde ninguna red de pruebas —falla el
+handshake, no devuelve 403—, pero Internet Archive conserva snapshots con código 200 hasta 2026: el
+sitio está vivo y lo que hay es un bloqueo de acceso, no link rot. La fila apuntaba además a la raíz
+del dominio, que incumple el criterio de "enlace directo al documento". Ahora apunta a la página del
+*Targeted Compliance Framework assurance review*, verificada en el snapshot del 7 de octubre de 2025
+—un día después del reembolso— donde constan Deloitte, la revisión independiente y el importe.
 
 Referencia recomendada para ampliar la muestra: [AI Incident Database](https://incidentdatabase.ai/)
 (> 3.000 informes) y el [AIAAIC Repository](https://www.aiaaic.org/).

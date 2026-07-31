@@ -19,6 +19,7 @@ FILA_OK = {
     "url": "https://example.org/a",
     "detectable_dd": "si",
     "control_dd": "Evaluación desagregada previa al despliegue",
+    "url_archivo": "https://web.archive.org/web/20200101000000/https://example.org/a",
 }
 
 
@@ -54,6 +55,7 @@ def test_dataset_valido_no_devuelve_errores():
         ("fecha", "01/01/2020", "YYYY-MM-DD"),
         ("fecha", "2099-01-01", "futuro"),
         ("url", "example.org", "URL absoluta"),
+        ("url_archivo", "https://example.org/copia", "Internet Archive"),
         ("empresa", "", "vacía"),
     ],
 )
@@ -96,3 +98,35 @@ def test_detectabilidad_fuera_de_vocabulario_invalida_el_dataset():
 
     assert any("detectable_dd" in e for e in errores)
     assert set(DETECTABILIDAD) == {"si", "parcial", "no"}
+
+
+def test_url_archivo_es_opcional_pero_debe_ser_de_internet_archive():
+    """Una fuente puede no tener copia; lo que no puede es tener una copia falsa."""
+    assert validar(df_de({**FILA_OK, "url_archivo": ""})) == []
+    errores = validar(df_de({**FILA_OK, "url_archivo": "https://example.org/copia"}))
+    assert any("Internet Archive" in e for e in errores)
+
+
+def test_toda_fuente_es_verificable_a_diez_anos_vista():
+    """La trazabilidad no puede depender de que un dominio siga en pie.
+
+    Se cumple de dos formas: con copia en Internet Archive, o citando un
+    repositorio cuya permanencia es su función (EDGAR de la SEC), donde una
+    copia externa no añade nada.
+    """
+    from aisid.data import HOSTS_PERMANENTES
+
+    df = load_incidents()
+    frágiles = df["id"][
+        (df["url_archivo"].astype(str).str.strip() == "")
+        & ~df["url"].str.startswith(HOSTS_PERMANENTES)
+    ].tolist()
+    assert not frágiles, f"sin copia archivada ni repositorio permanente: {frágiles}"
+
+
+def test_ninguna_fuente_apunta_a_la_raiz_de_un_dominio():
+    """Citar la portada de un medio no es citar: el criterio pide el documento."""
+    from urllib.parse import urlparse
+    df = load_incidents()
+    raices = df["id"][df["url"].map(lambda u: urlparse(u).path.strip("/") == "")].tolist()
+    assert not raices, f"apuntan a la raíz del dominio: {raices}"

@@ -41,10 +41,10 @@ porcentaje es un techo optimista y no una estimación.
 
 | | |
 |---|---|
-| **Dataset** | 23 incidentes, 15 columnas, contrato validado en carga → [`data/incidents.csv`](data/incidents.csv) · [metodología](data/DATASET.md) |
+| **Dataset** | 23 incidentes, 16 columnas, contrato validado en carga y copia archivada por fila → [`data/incidents.csv`](data/incidents.csv) · [metodología](data/DATASET.md) |
 | **Dashboard** | 5 vistas (Panorama · ¿Era previsible? · Caso en profundidad · Dataset · Metodología), filtros por tipo, periodo, severidad y dominio |
 | **Caso en profundidad** | [La cadena de suministro de modelos: OpenAI y Hugging Face (2023–2024)](case_studies/cadena-de-suministro-openai-huggingface.md) — 4 incidentes, causa raíz común y 7 controles que lo habrían evitado |
-| **Tests** | 35 tests sobre el contrato del dataset, las agregaciones y las figuras |
+| **Tests** | 44 tests sobre el contrato del dataset, las agregaciones y las figuras |
 
 ## Arrancar
 
@@ -105,7 +105,23 @@ Nada de doble eje Y. Recuento y severidad media son magnitudes distintas: la bar
 recuento y la severidad media va como etiqueta directa. La severidad por dominio es su propio
 gráfico, con una sola tinta secuencial porque es una magnitud, no una identidad.
 
-### 6. El tema viaja en la URL
+### 6. Cada fuente sobrevive a su propia URL
+
+La trazabilidad de un dataset como este caduca sola: los medios reorganizan sus URLs, los blogs
+renombran sus entradas y hay dominios que bloquean tráfico por región. Por eso cada fila lleva, junto
+al enlace vivo, una **copia permanente en Internet Archive** — el snapshot más cercano *posterior* al
+incidente, que es la página tal como era cuando se citó y no como quedó después.
+
+`scripts/check_links.py` distingue cuatro estados donde un comprobador ingenuo vería dos: enlace
+vivo, muro anti-bot (Reuters, NYT, Bloomberg y la SEC devuelven 403 a un script y abren bien en un
+navegador), verificable solo por copia archivada, y roto de verdad. Solo el último obliga a tocar la
+fila, y hay un test que exige que ninguna fuente dependa de que su dominio siga en pie.
+
+Ese criterio ya cambió dos filas: la de Zillow pasó de una página de relación con inversores a la
+**presentación 8-K ante la SEC**, y la de Deloitte Australia, de la raíz del dominio del
+departamento al documento concreto del *assurance review*.
+
+### 7. El tema viaja en la URL
 
 `?tema=dark` — un enlace compartido llega como se envió. También es lo que hace reproducible la
 grabación de la demo.
@@ -146,6 +162,10 @@ para evaluar a un proveedor de IA.
 |---|---|
 | ![Serie temporal](docs/07-serie-temporal.png) | ![Caso](docs/05-caso.png) |
 
+| ¿Era previsible? | Dataset, con enlace vivo y copia archivada |
+|---|---|
+| ![Previsible](docs/08-previsible.png) | ![Dataset](docs/06-dataset.png) |
+
 La demo del principio se regenera con `.venv/bin/python scripts/record_demo.py`, que levanta la app,
 la recorre con Playwright y monta el GIF. La documentación visual no se actualiza a mano.
 
@@ -165,7 +185,7 @@ data/
   DATASET.md                Metodología, taxonomía, rúbrica y limitaciones
 case_studies/               Análisis de causa raíz
 scripts/record_demo.py      Regenera docs/demo.gif y las capturas
-tests/                      35 tests
+tests/                      44 tests
 ```
 
 ## Limitaciones

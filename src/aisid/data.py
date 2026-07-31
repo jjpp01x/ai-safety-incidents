@@ -53,6 +53,14 @@ COLUMNAS_REQUERIDAS: tuple[str, ...] = (
     "control_dd",
 )
 
+# Debe existir, puede ir vacía: no toda fuente tiene copia en Internet Archive.
+COLUMNAS_OPCIONALES: tuple[str, ...] = ("url_archivo",)
+
+PREFIJO_ARCHIVO = "https://web.archive.org/web/"
+
+# Repositorios cuya permanencia es su función: no necesitan copia en un tercero.
+HOSTS_PERMANENTES: tuple[str, ...] = ("https://www.sec.gov/Archives/",)
+
 SEVERIDAD_MIN = 1
 SEVERIDAD_MAX = 5
 
@@ -65,7 +73,7 @@ def validar(df: pd.DataFrame) -> list[str]:
     """Devuelve la lista de incumplimientos del contrato. Vacía = dataset válido."""
     errores: list[str] = []
 
-    faltan = [c for c in COLUMNAS_REQUERIDAS if c not in df.columns]
+    faltan = [c for c in COLUMNAS_REQUERIDAS + COLUMNAS_OPCIONALES if c not in df.columns]
     if faltan:
         return [f"faltan columnas obligatorias: {', '.join(faltan)}"]
 
@@ -109,6 +117,11 @@ def validar(df: pd.DataFrame) -> list[str]:
     sin_url = df["id"][~df["url"].astype(str).str.startswith(("http://", "https://"))].tolist()
     if sin_url:
         errores.append(f"url no es una URL absoluta en: {sin_url}")
+
+    archivo = df["url_archivo"].astype(str).str.strip()
+    mal_archivo = df["id"][(archivo != "") & ~archivo.str.startswith(PREFIJO_ARCHIVO)].tolist()
+    if mal_archivo:
+        errores.append(f"url_archivo no apunta a Internet Archive en: {mal_archivo}")
 
     return errores
 

@@ -267,7 +267,7 @@ with dataset:
     card("Registros", "Vista de tabla del dataset filtrado — el gráfico nunca es la única lectura")
     tabla = f[[
         "id", "fecha", "empresa", "sistema", "tipo_label", "severidad",
-        "dominio", "pais", "estado", "evidencia", "fuente", "url",
+        "dominio", "pais", "estado", "evidencia", "fuente", "url", "url_archivo",
     ]].rename(columns={"tipo_label": "tipo_fallo"})
     st.dataframe(
         tabla,
@@ -280,6 +280,11 @@ with dataset:
                 "severidad", min_value=0, max_value=5, format="%d"
             ),
             "url": st.column_config.LinkColumn("fuente (URL)", display_text="abrir"),
+            "url_archivo": st.column_config.LinkColumn(
+                "copia archivada",
+                display_text="archivo",
+                help="Snapshot en Internet Archive: la cita sobrevive aunque el original desaparezca",
+            ),
         },
     )
     st.download_button(

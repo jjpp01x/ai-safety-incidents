@@ -109,7 +109,18 @@ def recorrido(page, rec: Grabadora) -> None:
     page.wait_for_timeout(3500)
     rec.frame(2)
 
-    # 3. Caso en profundidad.
+    # 3. ¿Era previsible?: el eje que convierte el recuento en lectura de riesgo.
+    page.get_by_role("tab", name="¿Era previsible?").click()
+    page.wait_for_timeout(1500)
+    rec.frame(6)
+    page.screenshot(path=str(DOCS / "08-previsible.png"))
+    page.mouse.wheel(0, 600)
+    page.wait_for_timeout(700)
+    rec.frame(4)
+    page.mouse.wheel(0, -600)
+    page.wait_for_timeout(600)
+
+    # 4. Caso en profundidad.
     page.get_by_role("tab", name="Caso en profundidad").click()
     page.wait_for_timeout(1200)
     rec.frame(5)
@@ -119,7 +130,7 @@ def recorrido(page, rec: Grabadora) -> None:
         page.wait_for_timeout(500)
         rec.frame(2)
 
-    # 4. Dataset: la vista de tabla, obligatoria cuando el color no basta.
+    # 5. Dataset: la vista de tabla, obligatoria cuando el color no basta.
     page.mouse.wheel(0, -3000)
     page.wait_for_timeout(600)
     page.get_by_role("tab", name="Dataset").click()
@@ -135,7 +146,7 @@ def recorrido(page, rec: Grabadora) -> None:
     page.wait_for_timeout(1200)
     rec.frame(3)
 
-    # 5. Aislar los fallos de seguridad: el color de cada tipo no se mueve al filtrar.
+    # 6. Aislar los fallos de seguridad: el color de cada tipo no se mueve al filtrar.
     for etiqueta in ("Contención", "Sesgo", "Alucinación"):
         chip = page.locator(
             f'span[data-baseweb="tag"]:has-text("{etiqueta}") span[role="presentation"]'
