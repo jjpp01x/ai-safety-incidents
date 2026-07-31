@@ -12,7 +12,13 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from .data import ETIQUETA_TIPO
-from .metrics import por_anio_tipo, por_dominio, por_tipo
+from .metrics import (
+    detectabilidad_por_tipo,
+    por_anio_tipo,
+    por_detectabilidad,
+    por_dominio,
+    por_tipo,
+)
 from .theme import FUENTE, SECUENCIAL, color_tipo, tema
 
 _HOVER = "%{hovertext}<extra></extra>"
@@ -202,3 +208,69 @@ def severidad_por_dominio(df: pd.DataFrame, modo: str = "light") -> go.Figure:
     fig.update_yaxes(showgrid=False, tickfont=dict(color=t["ink"], size=13))
     # La marca no engorda al filtrar: la altura sigue al nº de categorías, no al revés.
     return _base(fig, modo, alto=max(140, min(300, 42 * len(d) + 40)))
+
+
+def barras_detectabilidad(df: pd.DataFrame, modo: str = "light") -> go.Figure:
+    """Cuánto del daño registrado era previsible.
+
+    Una sola serie, ordenada por la escala natural de la variable (sí → no) en
+    lugar de por magnitud: aquí el orden ES la lectura, y reordenar por tamaño
+    destruiría la progresión que hace legible el gráfico.
+    """
+    t = tema(modo)
+    d = por_detectabilidad(df).iloc[::-1]
+    escala = [SECUENCIAL[-1], SECUENCIAL[len(SECUENCIAL) // 2], SECUENCIAL[1]]
+    fig = go.Figure(
+        go.Bar(
+            x=d["incidentes"],
+            y=d["detectable_label"],
+            orientation="h",
+            marker=dict(color=escala, line=dict(width=0)),
+            width=0.55,
+            text=[f"{int(n)}  ·  {p:.0f} %" for n, p in zip(d["incidentes"], d["pct"])],
+            textposition="outside",
+            textfont=dict(color=t["ink_secondary"], size=12),
+            hovertext=[
+                f"<b>{lab}</b><br>{int(n)} incidentes ({p:.0f} %)<br>Severidad media: {s:.2f}"
+                for lab, n, p, s in zip(
+                    d["detectable_label"], d["incidentes"], d["pct"], d["severidad_media"]
+                )
+            ],
+            hovertemplate=_HOVER,
+            cliponaxis=False,
+        )
+    )
+    fig.update_xaxes(showticklabels=False, showline=False, ticks="")
+    fig.update_yaxes(showgrid=False, tickfont=dict(color=t["ink"], size=13))
+    fig.update_layout(xaxis=dict(range=[0, max(1, d["incidentes"].max()) * 1.75]))
+    return _base(fig, modo, alto=240)
+
+
+def heatmap_tipo_detectabilidad(df: pd.DataFrame, modo: str = "light") -> go.Figure:
+    """Cruce modo de fallo × detectabilidad: qué clase de fallo se ve venir y cuál no."""
+    t = tema(modo)
+    tabla = detectabilidad_por_tipo(df)
+    z = tabla.to_numpy(dtype=float)
+    fig = go.Figure(
+        go.Heatmap(
+            z=z,
+            x=list(tabla.columns),
+            y=list(tabla.index),
+            colorscale=SECUENCIAL,
+            showscale=False,
+            xgap=3,
+            ygap=3,
+            text=[[("" if v == 0 else f"{int(v)}") for v in fila] for fila in z],
+            texttemplate="%{text}",
+            textfont=dict(family=FUENTE, size=13, color=t["ink"]),
+            hovertext=[
+                [f"<b>{tipo}</b><br>Detectable: {col}<br>{int(v)} incidentes"
+                 for col, v in zip(tabla.columns, fila)]
+                for tipo, fila in zip(tabla.index, z)
+            ],
+            hovertemplate=_HOVER,
+        )
+    )
+    fig.update_xaxes(showgrid=False, side="top", tickfont=dict(color=t["ink"], size=12))
+    fig.update_yaxes(showgrid=False, autorange="reversed", tickfont=dict(color=t["ink"], size=12))
+    return _base(fig, modo, alto=260)

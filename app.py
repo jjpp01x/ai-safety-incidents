@@ -13,9 +13,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))  # despliegue s
 import pandas as pd
 import streamlit as st
 
-from aisid.charts import barras_por_tipo, heatmap_anio_tipo, severidad_por_dominio, timeline
+from aisid.charts import (
+    barras_detectabilidad,
+    barras_por_tipo,
+    heatmap_anio_tipo,
+    heatmap_tipo_detectabilidad,
+    severidad_por_dominio,
+    timeline,
+)
 from aisid.data import ETIQUETA_TIPO, TIPOS, DatasetError, load_incidents
-from aisid.metrics import calidad_evidencia, kpis
+from aisid.metrics import calidad_evidencia, kpis, por_detectabilidad
 from aisid.theme import FUENTE, tema
 
 ROOT = Path(__file__).resolve().parent
@@ -177,8 +184,8 @@ if f.empty:
     st.stop()
 
 st.markdown("")
-panorama, caso, dataset, metodo = st.tabs(
-    ["Panorama", "Caso en profundidad", "Dataset", "Metodología"]
+panorama, diligencia, caso, dataset, metodo = st.tabs(
+    ["Panorama", "¿Era previsible?", "Caso en profundidad", "Dataset", "Metodología"]
 )
 
 # ---------------------------------------------------------------- panorama
@@ -206,6 +213,49 @@ with panorama:
     st.caption(
         "Calidad de la evidencia: "
         + " · ".join(f"{r.evidencia} {r.pct:.0f}%" for r in ev.itertuples())
+    )
+
+# ------------------------------------------------------------- diligencia
+with diligencia:
+    d = por_detectabilidad(f)
+    previsibles = d.loc[d["detectable_dd"] != "no", "incidentes"].sum()
+    pct = 100 * previsibles / len(f)
+
+    st.markdown(
+        f"### {pct:.0f} % de estos incidentes eran total o parcialmente previsibles\n\n"
+        "La pregunta que convierte un registro de incidentes en un instrumento de "
+        "inversor no es *qué salió mal*, sino **cuánto de esto se habría visto venir** "
+        "con controles que ya existían en el momento del despliegue. Cada fila del "
+        "dataset lleva, además del veredicto, el control concreto que lo habría "
+        "detectado: sin nombrar el control, la respuesta sería una opinión."
+    )
+
+    izq, der = st.columns([1, 1], gap="medium")
+    with izq:
+        card("Detectabilidad en revisión previa", "Recuento y porcentaje sobre el filtro activo")
+        st.plotly_chart(barras_detectabilidad(f, modo), use_container_width=True,
+                        config={"displayModeBar": False})
+    with der:
+        card("Modo de fallo × detectabilidad", "Qué clase de fallo se anticipa y cuál no")
+        st.plotly_chart(heatmap_tipo_detectabilidad(f, modo), use_container_width=True,
+                        config={"displayModeBar": False})
+
+    card("El control que lo habría anticipado", "Una fila por incidente, con su veredicto")
+    st.dataframe(
+        f[["id", "empresa", "sistema", "tipo_label", "detectable_label", "control_dd"]].rename(
+            columns={"tipo_label": "tipo_fallo", "detectable_label": "¿previsible?",
+                     "control_dd": "control que lo habría detectado"}
+        ),
+        use_container_width=True,
+        hide_index=True,
+        height=420,
+    )
+
+    st.caption(
+        "Límite declarado: esta columna es la única del dataset que es un juicio y no "
+        "un hecho comprobable. Se emite con conocimiento del desenlace, que es "
+        "precisamente la información que no tiene quien hace la revisión previa — "
+        "el porcentaje es por tanto un techo optimista, no una estimación."
     )
 
 # ---------------------------------------------------------------- caso

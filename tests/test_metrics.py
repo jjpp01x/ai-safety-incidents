@@ -112,9 +112,32 @@ def test_enriquecer_no_muta_el_original():
             "tipo_fallo": "sesgo", "severidad": "3", "pais": "ES", "dominio": "Consumo",
             "evidencia": "Oficial", "estado": "Mitigado", "resumen": "r",
             "fuente": "f", "url": "https://e.org",
+            "detectable_dd": "si", "control_dd": "Revisión previa",
         }],
         dtype=str,
     )
     enriquecer(crudo)
     assert not pd.api.types.is_integer_dtype(crudo["severidad"])
     assert not pd.api.types.is_datetime64_any_dtype(crudo["fecha"])
+
+
+def test_por_detectabilidad_cubre_las_tres_categorias_aunque_el_filtro_vacie_alguna():
+    from aisid.data import load_incidents
+    from aisid.metrics import por_detectabilidad
+
+    df = load_incidents()
+    out = por_detectabilidad(df[df["detectable_dd"] == "si"])
+
+    assert list(out["detectable_dd"]) == ["si", "parcial", "no"]
+    assert out.loc[out["detectable_dd"] == "no", "incidentes"].item() == 0
+    assert out["pct"].sum() == 100.0
+
+
+def test_detectabilidad_por_tipo_cruza_las_dos_taxonomias():
+    from aisid.data import load_incidents
+    from aisid.metrics import detectabilidad_por_tipo
+
+    tabla = detectabilidad_por_tipo(load_incidents())
+
+    assert list(tabla.columns) == ["Sí", "Parcial", "No"]
+    assert tabla.to_numpy().sum() == 23

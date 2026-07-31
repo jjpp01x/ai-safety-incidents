@@ -15,12 +15,34 @@ primaria en cada fila y limitaciones declaradas antes de que nadie cite una cifr
 
 ---
 
+## La pregunta que hace útil el dataset
+
+Un recuento de incidentes describe el pasado. Lo que un inversor o un comité de riesgo
+necesita saber es otra cosa: **¿cuánto de esto se habría visto venir?** Cada incidente
+lleva por eso un veredicto de detectabilidad en revisión previa y, junto a él, el
+control concreto que lo habría anticipado.
+
+| Detectabilidad | Incidentes | % | Severidad media |
+| --- | ---: | ---: | ---: |
+| Sí | 16 | 70 % | 2.94 |
+| Parcial | 6 | 26 % | 3.83 |
+| No | 1 | 4 % | 4.00 |
+
+El 96 % era total o parcialmente anticipable con controles que ya existían: el patrón
+dominante no es una tecnología que sorprende a sus creadores, sino un control conocido
+que no se aplicó. Pero la severidad se mueve en dirección contraria a la previsibilidad
+— lo previsible es frecuente y leve; lo imprevisible, raro y caro. Con n=23 eso es una
+hipótesis, no un resultado, y [la metodología](data/DATASET.md) declara por qué el
+porcentaje es un techo optimista y no una estimación.
+
+---
+
 ## Qué hay dentro
 
 | | |
 |---|---|
-| **Dataset** | 23 incidentes, 13 columnas, contrato validado en carga → [`data/incidents.csv`](data/incidents.csv) · [metodología](data/DATASET.md) |
-| **Dashboard** | 4 vistas (Panorama · Caso en profundidad · Dataset · Metodología), filtros por tipo, periodo, severidad y dominio |
+| **Dataset** | 23 incidentes, 15 columnas, contrato validado en carga → [`data/incidents.csv`](data/incidents.csv) · [metodología](data/DATASET.md) |
+| **Dashboard** | 5 vistas (Panorama · ¿Era previsible? · Caso en profundidad · Dataset · Metodología), filtros por tipo, periodo, severidad y dominio |
 | **Caso en profundidad** | [La cadena de suministro de modelos: OpenAI y Hugging Face (2023–2024)](case_studies/cadena-de-suministro-openai-huggingface.md) — 4 incidentes, causa raíz común y 7 controles que lo habrían evitado |
 | **Tests** | 35 tests sobre el contrato del dataset, las agregaciones y las figuras |
 

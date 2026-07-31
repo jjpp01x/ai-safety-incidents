@@ -60,6 +60,53 @@ Es una escala editorial: por eso está escrita, y por eso es discutible fila a f
 | `resumen` | texto | Una o dos frases: qué falló, no qué se dijo |
 | `fuente` | texto | Nombre de la fuente |
 | `url` | URL | Enlace directo, absoluto |
+| `detectable_dd` | enum | `si` · `parcial` · `no` — ver rúbrica abajo |
+| `control_dd` | texto | El control concreto que lo habría anticipado |
+
+### Detectabilidad en revisión previa (`detectable_dd`)
+
+La pregunta: **¿habría anticipado este fallo una revisión técnica hecha antes del
+despliegue, con los controles disponibles en ese momento?**
+
+| Valor | Criterio |
+| --- | --- |
+| `si` | Un control estándar y disponible en la época lo habría revelado (evaluación desagregada, red-teaming, escaneo de secretos, verificación de citas). |
+| `parcial` | La *clase* de riesgo era anticipable, pero no su forma concreta; o el fallo tenía un componente institucional u operativo fuera del alcance de una revisión técnica. |
+| `no` | El fallo no es una propiedad del sistema evaluable en revisión: ataque externo sobre el proceso, o condición no conocible en el momento. |
+
+**Esta es la única columna del dataset que es un juicio y no un hecho.** Por eso cada
+fila lleva `control_dd`: nombrar el control concreto convierte el veredicto en algo que
+quien lea el dataset puede rebatir. Un `si` sin control nombrado sería una opinión con
+formato de dato.
+
+**Sesgo declarado y no corregible:** el veredicto se emite conociendo el desenlace, que
+es exactamente la información de la que carece quien hace la revisión previa. El
+porcentaje resultante es un **techo optimista**, no una estimación de cuántos fallos se
+habrían evitado de verdad.
+
+### Lo que dice esta columna
+
+Con el dataset actual (23 incidentes):
+
+| Detectabilidad | Incidentes | % | Severidad media |
+| --- | ---: | ---: | ---: |
+| Sí | 16 | 70 % | 2.94 |
+| Parcial | 6 | 26 % | 3.83 |
+| No | 1 | 4 % | 4.00 |
+
+Dos lecturas, ninguna evidente de antemano:
+
+1. **Casi nada aquí era exótico.** El 96 % era total o parcialmente anticipable con
+   controles que ya existían. El patrón dominante no es una tecnología que sorprende a
+   sus creadores, sino un control conocido que no se aplicó.
+2. **La severidad se mueve en dirección contraria a la previsibilidad** (2.94 → 3.83 →
+   4.00). Lo previsible es más frecuente pero más leve; lo imprevisible es raro y caro.
+   Con n=23 esto no es un resultado estadístico, pero sí una hipótesis con consecuencia
+   práctica: los controles baratos recortan volumen, no cola.
+
+El cruce por modo de fallo lo afina: **la alucinación es 100 % previsible** en esta
+muestra (5 de 5), mientras que **seguridad es el modo menos previsible** (2 de 6 con un
+`si` claro). Un revisor que solo controle alucinación está cubriendo la parte fácil.
 
 El contrato se valida en cada carga (`aisid.data.validar`) y la aplicación **falla ruidosamente** si
 el CSV lo incumple: una fila mal escrita no debe convertirse en una barra silenciosamente

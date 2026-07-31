@@ -17,6 +17,8 @@ FILA_OK = {
     "resumen": "Resumen.",
     "fuente": "Fuente",
     "url": "https://example.org/a",
+    "detectable_dd": "si",
+    "control_dd": "Evaluación desagregada previa al despliegue",
 }
 
 
@@ -75,3 +77,22 @@ def test_load_incidents_falla_ruidosamente(tmp_path):
     df_de({**FILA_OK, "severidad": "7"}).to_csv(csv, index=False)
     with pytest.raises(DatasetError, match="severidad"):
         load_incidents(csv)
+
+
+def test_detectabilidad_forma_parte_del_contrato():
+    from aisid.data import COLUMNAS_REQUERIDAS
+
+    assert "detectable_dd" in COLUMNAS_REQUERIDAS
+    assert "control_dd" in COLUMNAS_REQUERIDAS
+
+
+def test_detectabilidad_fuera_de_vocabulario_invalida_el_dataset():
+    from aisid.data import DETECTABILIDAD, load_incidents, validar
+
+    df = load_incidents().astype({"detectable_dd": str})
+    df.loc[0, "detectable_dd"] = "quiza"
+
+    errores = validar(df)
+
+    assert any("detectable_dd" in e for e in errores)
+    assert set(DETECTABILIDAD) == {"si", "parcial", "no"}
